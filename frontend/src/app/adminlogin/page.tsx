@@ -1,11 +1,7 @@
 "use client";
 
-//src/app/login/page.tsx
-
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -30,16 +26,39 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center min-h-screen bg-gray-900">
       <form
         onSubmit={handleSubmit}
         className="p-8 rounded-xl border border-gray-700 bg-black/30 backdrop-blur-lg space-y-4 w-80"
       >
-        <h1 className="text-2xl font-bold text-center">Admin Login</h1>
-        <Input name="username" placeholder="Username" onChange={handleChange} required />
-        <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
+        <h1 className="text-2xl font-bold text-center text-white">Admin Login</h1>
+
+        <input
+          name="username"
+          placeholder="Username"
+          value={form.username}
+          onChange={handleChange}
+          className="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white"
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={handleChange}
+          className="w-full p-2 rounded border border-gray-600 bg-gray-800 text-white"
+          required
+        />
+
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <Button type="submit" className="w-full">Login</Button>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
+        >
+          Login
+        </button>
       </form>
     </div>
   );

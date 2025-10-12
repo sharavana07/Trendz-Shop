@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
-  const client = await db.connect(); // get client for transaction
+  const client = await db.connect();
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -14,14 +14,24 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { cartItems } = body; // expect cartItems = [{ id, quantity, price }, ...]
-    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    console.log("📦 Checkout body received:", body);
+
+    const cartItems = Array.isArray(body?.items) ? body.items : [];
+    if (cartItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+    }
+
+    // Validate fields
+    for (const item of cartItems) {
+      if (!item.id || !item.quantity || !item.price) {
+        console.warn("❌ Invalid item:", item);
+        return NextResponse.json({ error: "Invalid cart item format" }, { status: 400 });
+      }
     }
 
     // calculate total price server-side
     const totalPrice = cartItems.reduce(
-      (sum, item) => sum + item.quantity * item.price,
+      (sum: number, item: { quantity: number; price: number; }) => sum + item.quantity * item.price,
       0
     );
 
@@ -55,10 +65,12 @@ export async function POST(req: Request) {
 
     await client.query("COMMIT");
 
+    console.log("✅ Order saved:", { orderId, totalPrice });
+
     return NextResponse.json({ success: true, orderId, totalPrice });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Checkout error:", err);
+    console.error("❌ Checkout error:", err);
     return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
   } finally {
     client.release();

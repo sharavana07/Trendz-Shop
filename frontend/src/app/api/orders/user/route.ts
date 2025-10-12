@@ -1,20 +1,28 @@
+//src/app/api/orders/user/route.ts
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET() {
   try {
+    // ✅ Get session in App Router
     const session = await getServerSession(authOptions);
+console.log("Session object:", session);
 
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }console.log("Session object:", session);
+
 
     // ✅ Find the user ID
-    const userRes = await db.query("SELECT id FROM users WHERE email = $1", [
-      session.user.email,
-    ]);
+    const userRes = await db.query(
+      "SELECT id FROM users WHERE email = $1",
+      [session.user.email]
+    );
 
     if (userRes.rowCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -22,7 +30,7 @@ export async function GET() {
 
     const userId = userRes.rows[0].id;
 
-    // ✅ Fetch all orders + joined item summary
+    // ✅ Fetch orders with item count
     const ordersRes = await db.query(
       `
       SELECT 
