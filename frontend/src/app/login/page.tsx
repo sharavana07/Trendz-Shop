@@ -1,44 +1,82 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [form, setForm] = useState({ username: "", password: "" });
+  const { data: session, status } = useSession();
   const [error, setError] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleGoogleLogin = async () => {
+    try {
+      await signIn("google");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Login failed");
+      }
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = await signIn("credentials", {
-      redirect: false,
-      username: form.username,
-      password: form.password,
-    });
-
-    if (res?.error) setError("Invalid credentials");
-    else router.push("/admin");
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <form
-        onSubmit={handleSubmit}
-        className="p-8 rounded-xl border border-gray-700 bg-black/30 backdrop-blur-lg space-y-4 w-80"
-      >
-        <h1 className="text-2xl font-bold text-center">Admin Login</h1>
-        <Input name="username" placeholder="Username" onChange={handleChange} required />
-        <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <Button type="submit" className="w-full">Login</Button>
-      </form>
+    <div
+      style={{
+        maxWidth: 400,
+        margin: "50px auto",
+        padding: 20,
+        border: "1px solid #ccc",
+        borderRadius: 10,
+        boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+        textAlign: "center",
+      }}
+    >
+      <h2>User Login</h2>
+
+      {status === "loading" ? (
+        <p>Checking session...</p>
+      ) : session ? (
+        <div>
+          <p>Logged in as <strong>{session.user?.email}</strong></p>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#f44336",
+              color: "#fff",
+              border: "none",
+              borderRadius: 5,
+              cursor: "pointer",
+              marginTop: 10,
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      ) : (
+        <div>
+          <button
+            onClick={handleGoogleLogin}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#4285F4",
+              color: "#fff",
+              border: "none",
+              borderRadius: 5,
+              cursor: "pointer",
+              marginTop: 10,
+            }}
+          >
+            Login with Google
+          </button>
+        </div>
+      )}
+
+      {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>}
     </div>
   );
 }

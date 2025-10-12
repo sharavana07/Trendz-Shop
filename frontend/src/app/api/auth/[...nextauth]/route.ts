@@ -2,9 +2,14 @@
 
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
+import { Pool } from "pg";
 
-// Extend NextAuth types
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
 declare module "next-auth" {
   interface User {
     role?: string;
@@ -20,17 +25,16 @@ declare module "next-auth" {
   }
 }
 
-// Admin type
 interface Admin {
   id: number;
   username: string;
   password_hash: string;
 }
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "Admin Credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
@@ -55,22 +59,44 @@ const authOptions: NextAuthOptions = {
         }
       },
     }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
-  session: {
-    strategy: "jwt",
-  },
+
+  session: { strategy: "jwt" },
+
   callbacks: {
+    async signIn({ user }) {
+      try {
+        if (user.email && !user.role) {
+          await db.query(
+            `INSERT INTO users (name, email)
+             VALUES ($1, $2)
+             ON CONFLICT (email) DO NOTHING`,
+            [user.name || "Unnamed", user.email]
+          );
+        }
+      } catch (err) {
+        console.error("Error inserting user:", err);
+      }
+      return true;
+    },
+
     async jwt({ token, user }) {
       if (user?.role) token.role = user.role;
       return token;
     },
+
     async session({ session, token }) {
-      if (session.user && token.role) {
-        session.user.role = token.role as string;
+      if (session.user) {
+        session.user.role = (token.role as string) || "user";
       }
       return session;
     },
   },
+
   pages: {
     signIn: "/login",
   },
@@ -78,5 +104,3 @@ const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
-// /app/api/auth/[...nextauth]/route.ts
-export { authOptions }; // add this line at the end
