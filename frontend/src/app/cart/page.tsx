@@ -1,5 +1,5 @@
 "use client";
-
+// frontend/src/app/cart/page.tsx
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import CartNavbar from "@/components/CartNavbar";
@@ -19,16 +19,13 @@ interface OrderSummary {
 }
 
 interface CheckoutPayloadItem {
- id: number;
- quantity: number;
-price: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
 }
 
 interface CheckoutResponse {
   orderId?: number;
-  id?: number;
-  totalPrice?: number;
-  total?: number;
   message?: string;
   error?: string;
 }
@@ -40,7 +37,7 @@ export default function CartPage() {
   const [message, setMessage] = useState("");
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
 
-  // ✅ Load cart from localStorage once on mount
+  // Load cart from localStorage
   useEffect(() => {
     try {
       const stored = typeof window !== "undefined" ? localStorage.getItem("cart") : null;
@@ -56,7 +53,6 @@ export default function CartPage() {
           }));
           setCartItems(normalized);
         } else {
-          console.warn("localStorage.cart not an array — clearing it", parsed);
           localStorage.removeItem("cart");
           setCartItems([]);
         }
@@ -72,7 +68,7 @@ export default function CartPage() {
     }
   }, []);
 
-  // ✅ Sync cart → localStorage whenever cartItems changes
+  // Sync cart → localStorage
   useEffect(() => {
     if (!cartLoaded) return;
     try {
@@ -84,69 +80,66 @@ export default function CartPage() {
 
   const totalPrice = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-  // ✅ Checkout handler
+  // Checkout handler
   const handleCheckout = async () => {
     if (!cartLoaded) {
       setMessage("❌ Cart not ready yet. Try again in a moment.");
       return;
     }
-
     if (cartItems.length === 0) {
       setMessage("❌ Your cart is empty");
       return;
     }
 
+    // Prepare payload for FastAPI
     const payloadItems: CheckoutPayloadItem[] = cartItems.map(item => ({
-      id: item.id,
-            quantity: item.quantity, price: item.price,
+      product_id: item.id,
+      quantity: item.quantity,
+      unit_price: item.price,
     }));
 
-    console.log("Cart items on checkout:", payloadItems);
-    console.log("Checkout payload:", payloadItems);
+    const total_price = totalPrice;
+
+    // TODO: Replace this with actual logged-in user ID
+    const currentUserId = 1;
+
+    const payload = {
+      user_id: currentUserId,
+      items: payloadItems,
+      total_price,
+    };
 
     try {
       setLoading(true);
       setMessage("");
       setOrderSummary(null);
 
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("http://localhost:8000/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ items: payloadItems }),
+        body: JSON.stringify(payload),
       });
 
-      let data: CheckoutResponse;
-
-      try {
-        data = await res.json();
-      } catch {
-        const text = await res.text();
-        console.error("Non-JSON response from /api/checkout:", text);
-        throw new Error("Non-JSON response from server");
-      }
+      const data: CheckoutResponse = await res.json();
 
       if (!res.ok) {
-        const errMsg = data?.message ?? data?.error ?? "Checkout failed";
-        throw new Error(errMsg);
+        throw new Error(data?.message || data?.error || "Checkout failed");
       }
 
-      const orderId = data.orderId ?? data.id ?? null;
-      const serverTotal = data.totalPrice ?? data.total ?? totalPrice;
+      const orderId = data.orderId ?? -1;
 
-      setMessage(`✅ Order placed successfully! Order ID: ${orderId ?? "N/A"}`);
+      setMessage(`✅ Order placed successfully! Order ID: ${orderId}`);
       setOrderSummary({
         items: cartItems,
-        total: serverTotal,
-        orderId: orderId ?? -1,
+        total: total_price,
+        orderId,
       });
 
       localStorage.removeItem("cart");
       setCartItems([]);
     } catch (err) {
       console.error("Checkout error:", err);
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
-      setMessage("❌ " + errorMessage);
+      setMessage("❌ " + (err instanceof Error ? err.message : "Checkout failed"));
     } finally {
       setLoading(false);
     }

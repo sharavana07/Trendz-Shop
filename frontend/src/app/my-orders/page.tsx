@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// ✅ Define a TypeScript interface for an Order
 interface Order {
   order_id: string;
   created_at: string;
@@ -15,18 +14,54 @@ interface Order {
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const res = await fetch("/api/orders/user");
-      const data = await res.json();
-      setOrders(data.orders || []);
-      setLoading(false);
+      try {
+        const res = await fetch("/api/orders/user");
+        const data = await res.json();
+        setOrders(data.orders || []);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchOrders();
   }, []);
 
-  if (loading) return <p className="text-center mt-10">Loading your orders...</p>;
+  const handleDownload = async (orderId: string) => {
+    try {
+      setDownloading(orderId);
+      const res = await fetch("/api/orders/invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId }),
+      });
+
+      if (!res.ok) {
+        alert("Failed to generate invoice");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice_${orderId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading invoice:", err);
+      alert("Error downloading invoice");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  if (loading)
+    return <p className="text-center mt-10">Loading your orders...</p>;
 
   if (orders.length === 0)
     return (
@@ -53,7 +88,8 @@ export default function MyOrdersPage() {
                   <strong>Order ID:</strong> {order.order_id}
                 </p>
                 <p>
-                  <strong>Date:</strong> {new Date(order.created_at).toLocaleString()}
+                  <strong>Date:</strong>{" "}
+                  {new Date(order.created_at).toLocaleString()}
                 </p>
                 <p>
                   <strong>Items:</strong> {order.total_items}
@@ -65,12 +101,25 @@ export default function MyOrdersPage() {
                   <strong>Status:</strong> {order.payment_status}
                 </p>
               </div>
-              <Link
-                href={`/order-summary/${order.order_id}`}
-                className="text-violet-400 underline hover:text-violet-300"
-              >
-                View Details →
-              </Link>
+
+              <div className="flex flex-col items-end space-y-2">
+                <Link
+                  href={`/order-summary/${order.order_id}`}
+                  className="text-violet-400 underline hover:text-violet-300"
+                >
+                  View Details →
+                </Link>
+
+                <button
+                  onClick={() => handleDownload(order.order_id)}
+                  disabled={downloading === order.order_id}
+                  className="px-3 py-1 bg-violet-500 hover:bg-violet-600 rounded text-sm font-medium disabled:opacity-50"
+                >
+                  {downloading === order.order_id
+                    ? "Downloading..."
+                    : "Download Invoice"}
+                </button>
+              </div>
             </div>
           </li>
         ))}
