@@ -46,14 +46,16 @@ export default function CartPage() {
       setMessage("");
       setOrderSummary(null);
 
+      console.log("Sending cart items:", cartItems);
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: cartItems.map(item => ({
-            productId: item.id,
+          cartItems: cartItems.map(item => ({
+            id: item.id,
             quantity: item.quantity,
-            unitPrice: item.price,
+            price: item.price,
           })),
         }),
         credentials: "include",
