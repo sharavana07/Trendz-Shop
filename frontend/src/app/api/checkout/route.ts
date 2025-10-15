@@ -4,8 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
-  const client = await db.connect();
-
+  const client = await db.connect(); // get client for transaction
   try {
     // ✅ Step 1: Check authentication
     const session = await getServerSession(authOptions);
