@@ -3,12 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+interface OrderItem {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface Order {
   order_id: string;
   created_at: string;
   total_items: number;
   total_price: number;
   payment_status: string;
+  user_name?: string;
+  user_email?: string;
+  items?: OrderItem[];
 }
 
 export default function MyOrdersPage() {
@@ -16,6 +25,7 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
 
+  // Fetch all orders for user
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -31,34 +41,60 @@ export default function MyOrdersPage() {
     fetchOrders();
   }, []);
 
+  // Download invoice
   const handleDownload = async (orderId: string) => {
-    try {
-      setDownloading(orderId);
-      const res = await fetch("/api/orders/invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: orderId }),
-      });
+  try {
+    setDownloading(orderId);
 
-      if (!res.ok) {
-        alert("Failed to generate invoice");
-        return;
-      }
+    // 1️⃣ Fetch full order details
+    const orderRes = await fetch(`/api/orders/${orderId}`);
+    const orderData = await orderRes.json();
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice_${orderId}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Error downloading invoice:", err);
-      alert("Error downloading invoice");
-    } finally {
-      setDownloading(null);
+    if (!orderData || !orderData.items || orderData.items.length === 0) {
+      alert("Order details not found or empty.");
+      return;
     }
-  };
+
+    // 2️⃣ Send full order payload to the invoice API
+    const res = await fetch("/api/orders/invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        order_id: orderData.order_id,
+        user_name: orderData.user_name || "Guest",
+        user_email: orderData.user_email || "guest@example.com",
+        items: orderData.items.map((item: any) => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        total: orderData.total || orderData.total_price || 0,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Invoice generation failed:", errText);
+      alert("Failed to generate invoice.");
+      return;
+    }
+
+    // 3️⃣ Download PDF
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoice_${orderId}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error("Error downloading invoice:", err);
+    alert("Error downloading invoice");
+  } finally {
+    setDownloading(null);
+  }
+};
 
   if (loading)
     return <p className="text-center mt-10">Loading your orders...</p>;

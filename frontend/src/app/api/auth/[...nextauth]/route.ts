@@ -12,11 +12,12 @@ const db = new Pool({
 
 declare module "next-auth" {
   interface User {
+    id?: number;
     role?: string;
   }
   interface Session {
     user: {
-      id: unknown;
+      id?: number;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -52,7 +53,7 @@ export const authOptions: NextAuthOptions = {
           const match = await bcrypt.compare(credentials.password, admin.password_hash);
           if (!match) return null;
 
-          return { id: admin.id.toString(), name: admin.username, role: "admin" };
+          return { id: admin.id, name: admin.username, role: "admin" };
         } catch (err) {
           console.error("Auth error:", err);
           return null;
@@ -69,30 +70,56 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user }) {
+    console.log("signIn callback, user:", user);
       try {
         if (user.email && !user.role) {
-          await db.query(
+          // Insert or fetch existing user from DB
+          const insertRes = await db.query<{ id: number }>(
             `INSERT INTO users (name, email)
              VALUES ($1, $2)
-             ON CONFLICT (email) DO NOTHING`,
+             ON CONFLICT (email) DO NOTHING
+             RETURNING id`,
             [user.name || "Unnamed", user.email]
           );
+
+          let userId: number;
+          if (insertRes.rows.length > 0) {
+            userId = insertRes.rows[0].id;
+          } else {
+            const existing = await db.query<{ id: number }>(
+              `SELECT id FROM users WHERE email = $1`,
+              [user.email]
+            );
+            userId = existing.rows[0].id;
+          }
+
+          user.id = userId;
+          user.role = "user";
         }
       } catch (err) {
-        console.error("Error inserting user:", err);
+        console.error("Error inserting/fetching user:", err);
+        return false;
       }
       return true;
     },
 
     async jwt({ token, user }) {
+      
+    if (user) console.log("jwt callback, user:", user);
       if (user?.role) token.role = user.role;
+      if (user?.id) token.id = user.id;
+    console.log("jwt callback, token:", token);
       return token;
     },
 
     async session({ session, token }) {
+      
+    console.log("session callback, before:", session.user);
       if (session.user) {
         session.user.role = (token.role as string) || "user";
+        session.user.id = token.id as number;
       }
+    console.log("session callback, after:", session.user);
       return session;
     },
   },
