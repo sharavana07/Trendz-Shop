@@ -43,58 +43,39 @@ export default function MyOrdersPage() {
 
   // Download invoice
   const handleDownload = async (orderId: string) => {
-  try {
-    setDownloading(orderId);
+    try {
+      setDownloading(orderId);
 
-    // 1️⃣ Fetch full order details
-    const orderRes = await fetch(`/api/orders/${orderId}`);
-    const orderData = await orderRes.json();
+      // Directly call backend PDF generation route
+      const res = await fetch(`/api/invoice/generate/${orderId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}) // empty body or send extra info if needed
+      });
 
-    if (!orderData || !orderData.items || orderData.items.length === 0) {
-      alert("Order details not found or empty.");
-      return;
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Invoice generation failed:", errText);
+        alert("Failed to generate invoice.");
+        return;
+      }
+
+      // Download PDF
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice_${orderId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error("Error downloading invoice:", err);
+      alert("Error downloading invoice");
+    } finally {
+      setDownloading(null);
     }
-
-    // 2️⃣ Send full order payload to the invoice API
-    const res = await fetch("/api/orders/invoice", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        order_id: orderData.order_id,
-        user_name: orderData.user_name || "Guest",
-        user_email: orderData.user_email || "guest@example.com",
-        items: orderData.items.map((item: any) => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-        })),
-        total: orderData.total || orderData.total_price || 0,
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("Invoice generation failed:", errText);
-      alert("Failed to generate invoice.");
-      return;
-    }
-
-    // 3️⃣ Download PDF
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice_${orderId}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-
-  } catch (err) {
-    console.error("Error downloading invoice:", err);
-    alert("Error downloading invoice");
-  } finally {
-    setDownloading(null);
-  }
-};
+  };
 
   if (loading)
     return <p className="text-center mt-10">Loading your orders...</p>;
@@ -120,22 +101,11 @@ export default function MyOrdersPage() {
           >
             <div className="flex justify-between items-center">
               <div>
-                <p>
-                  <strong>Order ID:</strong> {order.order_id}
-                </p>
-                <p>
-                  <strong>Date:</strong>{" "}
-                  {new Date(order.created_at).toLocaleString()}
-                </p>
-                <p>
-                  <strong>Items:</strong> {order.total_items}
-                </p>
-                <p>
-                  <strong>Total:</strong> ₹{order.total_price}
-                </p>
-                <p>
-                  <strong>Status:</strong> {order.payment_status}
-                </p>
+                <p><strong>Order ID:</strong> {order.order_id}</p>
+                <p><strong>Date:</strong> {new Date(order.created_at).toLocaleString()}</p>
+                <p><strong>Items:</strong> {order.total_items}</p>
+                <p><strong>Total:</strong> ₹{order.total_price}</p>
+                <p><strong>Status:</strong> {order.payment_status}</p>
               </div>
 
               <div className="flex flex-col items-end space-y-2">
@@ -151,9 +121,7 @@ export default function MyOrdersPage() {
                   disabled={downloading === order.order_id}
                   className="px-3 py-1 bg-violet-500 hover:bg-violet-600 rounded text-sm font-medium disabled:opacity-50"
                 >
-                  {downloading === order.order_id
-                    ? "Downloading..."
-                    : "Download Invoice"}
+                  {downloading === order.order_id ? "Downloading..." : "Download Invoice"}
                 </button>
               </div>
             </div>
