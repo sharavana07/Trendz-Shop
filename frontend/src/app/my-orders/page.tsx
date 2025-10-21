@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Download, Calendar, Package, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import Navbar from "../../components/my_orders_navbar";
 
 interface OrderItem {
   name: string;
@@ -134,6 +135,9 @@ export default function MyOrdersPage() {
   }
 
   return (
+  <>
+      {/* Navbar should be outside the gradient wrapper */}
+      <Navbar />
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-10">
@@ -223,5 +227,6 @@ export default function MyOrdersPage() {
         </div>
       </div>
     </div>
+  </>
   );
 }
