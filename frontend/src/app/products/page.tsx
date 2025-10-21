@@ -3,6 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Star, Zap } from 'lucide-react';
+import Navbar from "../../components/Product_Navbar";
+
+
 
 type Product = {
   id: string | number;
@@ -34,20 +37,10 @@ export default function ProductListPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
+          <Navbar /> {/* 🌟 Added here */}
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-black/30 border-b border-purple-500/20">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <ShoppingBag className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-white">Collections</h1>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-purple-300">
-            <Zap className="w-4 h-4" />
-            <span>Trending Now</span>
-          </div>
-        </div>
+        
       </header>
 
       {/* Main Content */}

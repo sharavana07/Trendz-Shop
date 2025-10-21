@@ -10,9 +10,6 @@ export default function Navbar() {
       </div>
 
       <div className="space-x-6 text-sm font-medium">
-        <Link href="/admin" className="hover:text-gray-300 transition">
-          Admin
-        </Link>
         <Link href="/adminlogin" className="hover:text-gray-300 transition">
           Admin Login
         </Link>
@@ -24,9 +21,6 @@ export default function Navbar() {
         </Link>
         <Link href="/my-orders" className="hover:text-gray-300 transition">
           My Orders
-        </Link>
-        <Link href="/order-summary" className="hover:text-gray-300 transition">
-          Order Summary
         </Link>
         <Link href="/cart" className="hover:text-gray-300 transition">
           Cart
