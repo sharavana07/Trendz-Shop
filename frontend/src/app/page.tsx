@@ -1,6 +1,6 @@
 // app/page.tsx
 import React from "react";
-import Navbar from "../components/navbar"; // adjust path if needed
+import Navbar from "../components/Navbar" // adjust path if needed
 
 export default function HomePage() {
   return (
