@@ -5,6 +5,7 @@ from app.routers import products
 from app.core.database import Base, engine
 from app.routers import admins
 from app.routers import orders
+from app.routers import users
 
 from app.routers import invoice
 
@@ -27,6 +28,7 @@ app.add_middleware(
 
 # Include routes
 app.include_router(products.router)
+app.include_router(users.router)
 
 
 app.include_router(invoice.router)
