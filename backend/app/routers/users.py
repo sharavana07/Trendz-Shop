@@ -12,3 +12,7 @@ def get_current_user(db: Session = Depends(get_db)):
     if not user:
         return {"error": "No users found in database."}
     return user
+@router.get("/user/{email}")
+def get_user_orders(email: str, db: Session = Depends(get_db)):
+    orders = db.query(Order).filter(Order.user_email == email).all()
+    return orders
