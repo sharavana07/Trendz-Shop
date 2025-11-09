@@ -175,7 +175,7 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-black text-white">
       <CartNavbar />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 py-12">
         
 
         {cartItems.length === 0 && !orderSummary ? (
